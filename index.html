@@ -699,5 +699,38 @@
     <script src="scripts/hasil-online.js"></script>
     <script src="scripts/materi.js"></script>
     <script src="scripts/game.js"></script>
+    <script>
+        // Perbaikan otomatis: menggabungkan tantangan selesai Level 1-3 (interaksiSelesai)
+        // dengan soal benar Level 4-5 (jawabanBenar) agar seluruh level terbaca di spreadsheet.
+        (function () {
+            if (!window.HasilOnline || typeof window.HasilOnline.enqueue !== 'function') return;
+            const originalEnqueue = window.HasilOnline.enqueue.bind(window.HasilOnline);
+            window.HasilOnline.enqueue = function (result) {
+                if (result && typeof result === 'object') {
+                    const totalRekapan = Array.isArray(result.rekapan) ? result.rekapan.length : 0;
+                    const gabungan = (Number(result.jawabanBenar) || 0) + (Number(result.interaksiSelesai) || 0);
+                    const totalBenar = Math.max(totalRekapan, gabungan);
+                    result.jawabanBenar = totalBenar;
+
+                    try {
+                        const historyKey = 'liga-pahlawan-offline-hasil-v1';
+                        const raw = localStorage.getItem(historyKey);
+                        if (raw) {
+                            const history = JSON.parse(raw);
+                            if (Array.isArray(history)) {
+                                history.forEach(function (item) {
+                                    if (item && item.id === result.id) {
+                                        item.jawabanBenar = totalBenar;
+                                    }
+                                });
+                                localStorage.setItem(historyKey, JSON.stringify(history));
+                            }
+                        }
+                    } catch (err) { /* Abaikan jika penyimpanan lokal dibatasi */ }
+                }
+                return originalEnqueue(result);
+            };
+        })();
+    </script>
 </body>
 </html>
